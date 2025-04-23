@@ -5,20 +5,12 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="aeabf829-f28a-45fe-b511-66c546238e4a" name="Changes" comment="">
-      <change afterPath="$PROJECT_DIR$/.gitignore" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/payroll/company_details/serializer.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/payroll/employee_details/serializer.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/payroll/employee_details/utils.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/payroll/company_details/models.py" beforeDir="false" afterPath="$PROJECT_DIR$/payroll/company_details/models.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/payroll/company_details/serializer.py" beforeDir="false" afterPath="$PROJECT_DIR$/payroll/company_details/serializer.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/payroll/company_details/urls.py" beforeDir="false" afterPath="$PROJECT_DIR$/payroll/company_details/urls.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/payroll/company_details/views.py" beforeDir="false" afterPath="$PROJECT_DIR$/payroll/company_details/views.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/payroll/employee_details/models.py" beforeDir="false" afterPath="$PROJECT_DIR$/payroll/employee_details/models.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/payroll/employee_details/urls.py" beforeDir="false" afterPath="$PROJECT_DIR$/payroll/employee_details/urls.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/payroll/employee_details/views.py" beforeDir="false" afterPath="$PROJECT_DIR$/payroll/employee_details/views.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/payroll/payroll/settings.py" beforeDir="false" afterPath="$PROJECT_DIR$/payroll/payroll/settings.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/payroll/payroll/urls.py" beforeDir="false" afterPath="$PROJECT_DIR$/payroll/payroll/urls.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/requirments.txt" beforeDir="false" afterPath="$PROJECT_DIR$/requirments.txt" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />

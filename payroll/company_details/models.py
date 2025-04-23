@@ -17,5 +17,5 @@ class Company(models.Model):
         return self.name
 
 
-class department(models.Model):
+class Department(models.Model):
     name=models.CharField(max_length=20,unique=True)
