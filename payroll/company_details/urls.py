@@ -5,7 +5,7 @@ from .views import CompanyViewSet,DepartmentViewSet,UserViewSet
 router = DefaultRouter()
 
 router.register(r'User', UserViewSet)
-router.register(r'Company', CompanyViewSet)
+router.register(r'company', CompanyViewSet)
 router.register(r'department', DepartmentViewSet)
 
 
