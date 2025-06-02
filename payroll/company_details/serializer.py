@@ -33,5 +33,5 @@ class CompanySerialiazer(serializers.ModelSerializer):
 
 class DepartmentSerialiazer(serializers.ModelSerializer):
     class Meta:
-        models = Department
+        model = Department
         fields = '__all__'

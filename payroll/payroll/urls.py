@@ -28,6 +28,7 @@ urlpatterns = [
     path('api/token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
     path('company/', include('company_details.urls')),
     path('employee/', include('employee_details.urls')),
+    
 
 ]
 if settings.DEBUG:

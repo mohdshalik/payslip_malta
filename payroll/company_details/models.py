@@ -19,3 +19,4 @@ class Company(models.Model):
 
 class Department(models.Model):
     name=models.CharField(max_length=20,unique=True)
+    company=models.ForeignKey('Company',on_delete=models.CASCADE)

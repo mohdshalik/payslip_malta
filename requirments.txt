@@ -4,3 +4,4 @@ psycopg2
 simplejwt
 reportlab
 djangorestframework-simplejwt
+django-cors-headers

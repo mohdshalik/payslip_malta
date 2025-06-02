@@ -1,12 +1,15 @@
 from rest_framework import serializers
-from . models import Employee,SalaryComponent,Payslip,PayrollRun,EmployeeSalaryStructure,Role,PayslipComponent
+from . models import Employee,SalaryComponent,Payslip,PayrollRun,EmployeeSalaryStructure,Role,PayslipComponent,Role
 
 class SalaryComponentSerializer(serializers.ModelSerializer):
     class Meta:
         model = SalaryComponent
         fields = '__all__'
 
-
+class EmployeeSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Employee
+        fields = '__all__'
 class EmployeeSalaryStructureSerializer(serializers.ModelSerializer):
     emp_code = serializers.SerializerMethodField()  # Field for emp_code from emp_master
     component_name = serializers.SerializerMethodField()  # Field for name from SalaryComponent
@@ -56,3 +59,8 @@ class PayslipSerializer(serializers.ModelSerializer):
 
 
 
+class RoleSerializer(serializers.ModelSerializer):
+
+    class Meta:
+        model = Role
+        fields = '__all__'

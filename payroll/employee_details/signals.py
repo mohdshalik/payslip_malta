@@ -40,7 +40,7 @@ def update_employee_salary_structure(sender, instance, created, **kwargs):
                     component_amounts[sc.component.code] = float(sc.amount)
                     logger.info(f"Using fixed component {sc.component.name} ({sc.component.code}): {sc.amount}")
 
-            # Calculate the amount using the formulag
+            # Calculate the amount using the formula
             amount = evaluate_formula(instance.formula, component_amounts)
             logger.info(f"Calculated amount for {instance.name} ({instance.code}) for employee {employee}: {amount}")
 
