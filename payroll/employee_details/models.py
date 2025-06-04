@@ -1,21 +1,24 @@
 from django.db import models
+from datetime import datetime, timedelta,timezone, time,date
+
 
 # Create your models here.
-class Role(models.Model):
-    role_name=models.CharField(max_length=50,unique=True)
-    
+
 
 class Employee(models.Model):
     company = models.ForeignKey('company_details.Company', on_delete=models.CASCADE, related_name='employees')
+    emp_dept_id = models.ForeignKey('company_details.Department', on_delete=models.CASCADE, related_name='employees')
+    
+
     emp_code = models.CharField(max_length=50,unique=True)
     first_name = models.CharField(max_length=50,null=True)
     last_name = models.CharField(max_length=50,null=True)
     address = models.CharField(max_length=100,null=True )
     email = models.EmailField(unique=True,null=True)
-    job_title=models.ForeignKey('role',on_delete=models.CASCADE)
+    job_title=models.ForeignKey('company_details.Role',on_delete=models.CASCADE)
     phone_number = models.CharField(max_length=20)
     date_of_birth = models.DateField()
-    hire_date = models.DateField()
+    hired_date = models.DateField()
     social_security_no = models.CharField(max_length=50,unique=True,null=True)
     Tax_Registration_Number = models.CharField(max_length=50,unique=True,null=True)
     Bank_Account_Number = models.CharField(max_length=50,unique=True)
@@ -67,20 +70,32 @@ class PayrollRun(models.Model):
         ('pending', 'Pending'),
         ('processed', 'Processed'),
         ('approved', 'Approved'),
-        ('paid', 'Paid'),  # Added status
+        ('paid', 'Paid'),
     ]
-
-    name = models.CharField(max_length=100, blank=True, help_text="Optional payroll run name")  # New field
-    start_date = models.DateField(help_text="Start date of payroll period")
-    end_date = models.DateField(help_text="End date of payroll period")
-    payment_date = models.DateField(null=True, blank=True, help_text="When employees will be paid")  # New field
-
-    branch = models.ForeignKey('company_details.Company', on_delete=models.SET_NULL, null=True, blank=True)
-    # department = models.ForeignKey('OrganisationManager.dept_master', on_delete=models.SET_NULL, null=True, blank=True)
+    
+    MONTH_CHOICES = [
+        (1, 'January'),
+        (2, 'February'),
+        (3, 'March'),
+        (4, 'April'),
+        (5, 'May'),
+        (6, 'June'),
+        (7, 'July'),
+        (8, 'August'),
+        (9, 'September'),
+        (10, 'October'),
+        (11, 'November'),
+        (12, 'December'),
+    ]
+    
+    name = models.CharField(max_length=100, blank=True, help_text="Optional payroll run name")
+    month = models.IntegerField(choices=MONTH_CHOICES, help_text="Month of the payroll period")
+    year = models.IntegerField(help_text="Year of the payroll period")
+    payment_date = models.DateField(null=True, blank=True, help_text="When employees will be paid")
+    # branch = models.ForeignKey('OrganisationManager.brnch_mstr', on_delete=models.SET_NULL, null=True, blank=True)
+    department = models.ForeignKey('company_details.Department', on_delete=models.SET_NULL, null=True, blank=True)
     # category = models.ForeignKey('OrganisationManager.ctgry_master', on_delete=models.SET_NULL, null=True, blank=True)
-
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending')
-
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -123,3 +138,69 @@ class PayslipComponent(models.Model):
 
     def __str__(self):
         return f"{self.payslip.employee} - {self.component.name} ({self.amount})"
+    
+
+
+
+
+class EmployeeYearlyCalendar(models.Model):
+    emp        = models.ForeignKey(Employee, on_delete=models.CASCADE, related_name='yearly_calendar')
+    year       = models.PositiveIntegerField()
+    # Store data for each day in a JSON format, for example: {"2024-01-01": {"status": "Holiday", "remarks": "New Year"}}
+    daily_data = models.JSONField(default=dict)  # Stores the daily status, leave type, etc.
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        unique_together = ('emp', 'year')
+        ordering = ['year']
+
+    def __str__(self):
+        return f"Yearly Calendar for {self.emp} - {self.year}"
+
+    def populate_calendar(self, holidays, weekends, attendance, leave_requests):
+        """
+        Populate the calendar with holidays, weekends, attendance, and leave requests.
+        """
+        start_date = date(self.year, 1, 1)
+        end_date = date(self.year, 12, 31)
+
+        current_date = start_date
+        while current_date <= end_date:
+            # Set initial status
+            day_status = 'Work'
+            remarks = None
+            leave_type = None
+
+            # Check if it's a holiday
+            if current_date in holidays:
+                day_status = 'Holiday'
+                remarks = 'Holiday'
+
+            # Check if it's a weekend
+            elif any(weekend.is_weekend(current_date) for weekend in weekends):
+                day_status = 'Weekend'
+                remarks = 'Weekend'
+
+            # Check if leave is approved for the day
+            elif any(l.start_date <= current_date <= l.end_date and l.status == 'Approved' for l in leave_requests):
+                day_status = 'Leave'
+                leave_type = next((l.leave_type.name for l in leave_requests if l.start_date <= current_date <= l.end_date and l.status == 'Approved'), None)
+                remarks = f"Leave: {leave_type}"
+
+            # Check attendance
+            elif any(a.date == current_date for a in attendance):
+                day_status = 'Present'
+                remarks = 'Attended'
+
+            # Populate the daily data
+            self.daily_data[str(current_date)] = {
+                'status': day_status,
+                'remarks': remarks,
+                'leave_type': leave_type
+            }
+
+            current_date += timedelta(days=1)
+
+        self.save()
+

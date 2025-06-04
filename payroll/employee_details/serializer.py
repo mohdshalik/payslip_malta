@@ -1,5 +1,6 @@
 from rest_framework import serializers
-from . models import Employee,SalaryComponent,Payslip,PayrollRun,EmployeeSalaryStructure,Role,PayslipComponent,Role
+from . models import Employee,SalaryComponent,Payslip,PayrollRun,EmployeeSalaryStructure,PayslipComponent
+from company_details.models import Role
 
 class SalaryComponentSerializer(serializers.ModelSerializer):
     class Meta:

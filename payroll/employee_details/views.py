@@ -6,8 +6,10 @@ from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.response import Response
 import datetime
-from .models import SalaryComponent,EmployeeSalaryStructure,Payslip,PayslipComponent,Employee,Role,PayrollRun,Employee
-from .serializer import SalaryComponentSerializer,EmployeeSalaryStructureSerializer,PayslipSerializer,PaySlipComponentSerializer,PayrollRunSerializer,EmployeeSerializer,RoleSerializer
+from .models import SalaryComponent,EmployeeSalaryStructure,Payslip,PayslipComponent,Employee,PayrollRun,Employee
+from .serializer import SalaryComponentSerializer,EmployeeSalaryStructureSerializer,PayslipSerializer,PaySlipComponentSerializer,PayrollRunSerializer,EmployeeSerializer
+from company_details.models import Role
+from company_details.serializer import RoleSerializer
 # Create your views here.
 
 class EmployeeViewSet(viewsets.ModelViewSet):

@@ -1,7 +1,7 @@
 from django.shortcuts import render
-from  .models import Company,Department
+from  .models import Company,Department,Role
 from django.contrib.auth.models import User
-from .serializer import CompanySerialiazer,DepartmentSerialiazer,UserSerializer
+from .serializer import CompanySerialiazer,DepartmentSerialiazer,UserSerializer,RoleSerializer
 from rest_framework import viewsets
 
 class UserViewSet(viewsets.ModelViewSet):
@@ -19,3 +19,7 @@ class DepartmentViewSet(viewsets.ModelViewSet):
     queryset = Department.objects.all()
     serializer_class = DepartmentSerialiazer
 
+
+class RoleViewSet(viewsets.ModelViewSet):
+    queryset = Role.objects.all()
+    serializer_class = RoleSerializer
