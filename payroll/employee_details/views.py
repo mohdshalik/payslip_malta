@@ -123,5 +123,17 @@ class PayslipComponentViewSet(viewsets.ModelViewSet):
 class PayrollRunViewSet(viewsets.ModelViewSet):
     queryset = PayrollRun.objects.all()
     serializer_class = PayrollRunSerializer
+    def perform_create(self, serializer):
+        # Save the payroll run and automatically generate payslips
+        serializer.save()
+
+    @action(detail=True, methods=['post'], url_path='generate-payslips')
+    def generate_payslips(self, request, pk=None):
+        payroll_run = self.get_object()
+        if payroll_run.status != 'pending':
+            return Response({'error': 'Payslips can only be generated for pending payroll runs'}, status=400)
+        
+        payroll_run.generate_payslips()
+        return Response({'status': 'Payslips generated successfully'})
 
 

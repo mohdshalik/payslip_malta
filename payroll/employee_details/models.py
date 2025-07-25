@@ -1,6 +1,8 @@
 from django.db import models
 from datetime import datetime, timedelta,timezone, time,date
-
+from django.contrib.auth.models import User
+from calendar import monthrange 
+import decimal
 
 # Create your models here.
 
@@ -25,6 +27,7 @@ class Employee(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     fss_status = models.CharField(max_length=10, null=True, blank=True)
+    is_active = models.BooleanField(default=True)
     def __str__(self):
         return f"{self.first_name} {self.last_name}"
 
@@ -50,7 +53,7 @@ class SalaryComponent(models.Model):
 
 
 class EmployeeSalaryStructure(models.Model):
-    employee = models.ForeignKey('Employee', on_delete=models.CASCADE, related_name='salary_structures')
+    employee = models.ForeignKey(Employee, on_delete=models.CASCADE, related_name='salary_structures')
     component = models.ForeignKey(SalaryComponent, on_delete=models.CASCADE, related_name='employee_components')
     amount = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True,
                                  help_text="Amount for this component")
@@ -100,15 +103,76 @@ class PayrollRun(models.Model):
     updated_at = models.DateTimeField(auto_now=True)
 
     def get_employees(self):
-        # from EmpManagement.models import emp_master
         employees = Employee.objects.all()
-        # if self.branch:
-        #     employees = employees.filter(emp_branch_id=self.branch)
-        # if self.department:
-        #     employees = employees.filter(emp_dept_id=self.department)
-        # if self.category:
-        #     employees = employees.filter(emp_ctgry_id=self.category)
+        if self.department:
+            employees = employees.filter(emp_dept_id=self.department)
         return employees
+
+    def save(self, *args, **kwargs):
+        is_new = self._state.adding
+        super().save(*args, **kwargs)
+        
+        if is_new and self.status == 'pending':
+            self.generate_payslips()
+
+    def generate_payslips(self):
+        # Get total working days in the month
+        total_days = monthrange(self.year, self.month)[1]
+        
+        # Get all employees based on department filter
+        employees = self.get_employees()
+        
+        for employee in employees:
+            # Check if payslip already exists for this employee and payroll run
+            if not Payslip.objects.filter(payroll_run=self, employee=employee).exists():
+                # Get employee salary structure
+                salary_components = EmployeeSalaryStructure.objects.filter(
+                    employee=employee, 
+                    is_active=True
+                )
+                
+                # Calculate totals
+                gross_salary = decimal.Decimal('0.00')
+                total_deductions = decimal.Decimal('0.00')
+                total_additions = decimal.Decimal('0.00')
+                
+                # Create payslip
+                payslip = Payslip.objects.create(
+                    payroll_run=self,
+                    employee=employee,
+                    total_working_days=total_days,
+                    # days_worked=total_days,  # Assuming full attendance, modify as needed
+                    status='pending'
+                )
+                
+                # Process each salary component
+                for salary_component in salary_components:
+                    amount = salary_component.amount or decimal.Decimal('0.00')
+                    
+                    # Apply pro-rata adjustment if needed
+                    if not salary_component.component.is_fixed:
+                        amount = (amount * payslip.days_worked) / payslip.total_working_days
+                        
+                    # Create payslip component
+                    PayslipComponent.objects.create(
+                        payslip=payslip,
+                        component=salary_component.component,
+                        amount=amount
+                    )
+                    
+                    # Update totals based on component type
+                    if salary_component.component.component_type == 'addition':
+                        total_additions += amount
+                        gross_salary += amount
+                    elif salary_component.component.component_type == 'deduction':
+                        total_deductions += amount
+                
+                # Update payslip with calculated totals
+                payslip.gross_salary = gross_salary
+                payslip.total_additions = total_additions
+                payslip.total_deductions = total_deductions
+                payslip.net_salary = gross_salary - total_deductions
+                payslip.save()
 
     def __str__(self):
         return f"Payroll - {self.get_month_display()} {self.year} ({self.status})"
@@ -116,7 +180,7 @@ class PayrollRun(models.Model):
 
 class Payslip(models.Model):
     payroll_run = models.ForeignKey(PayrollRun, on_delete=models.CASCADE, related_name='payslips')
-    employee = models.ForeignKey('Employee', on_delete=models.CASCADE, related_name='payslips')
+    employee = models.ForeignKey(Employee, on_delete=models.CASCADE, related_name='payslips')
     gross_salary = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)  # Added
     net_salary = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
     total_deductions = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
@@ -125,12 +189,10 @@ class Payslip(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     # New fields for working days
     total_working_days = models.PositiveIntegerField(default=0, help_text="Total working days in the payroll period")
-    days_worked = models.PositiveIntegerField(default=0, help_text="Number of days the employee worked")
-    pro_rata_adjustment = models.DecimalField(max_digits=10, decimal_places=2, default=0.00,
-                                              help_text="Pro-rata adjustment")  # New field
-    arrears = models.DecimalField(max_digits=10, decimal_places=2, default=0.00,
-                                  help_text="Arrears amount")  # New field
-
+    # days_worked = models.PositiveIntegerField(default=0, help_text="Number of days the employee worked")
+    # pro_rata_adjustment = models.DecimalField(max_digits=10, decimal_places=2, default=0.00,
+    #              
+    
 class PayslipComponent(models.Model):
     payslip = models.ForeignKey(Payslip, on_delete=models.CASCADE, related_name='components')
     component = models.ForeignKey(SalaryComponent, on_delete=models.CASCADE)
@@ -140,67 +202,4 @@ class PayslipComponent(models.Model):
         return f"{self.payslip.employee} - {self.component.name} ({self.amount})"
     
 
-
-
-
-class EmployeeYearlyCalendar(models.Model):
-    emp        = models.ForeignKey(Employee, on_delete=models.CASCADE, related_name='yearly_calendar')
-    year       = models.PositiveIntegerField()
-    # Store data for each day in a JSON format, for example: {"2024-01-01": {"status": "Holiday", "remarks": "New Year"}}
-    daily_data = models.JSONField(default=dict)  # Stores the daily status, leave type, etc.
-    created_at = models.DateTimeField(auto_now_add=True)
-    updated_at = models.DateTimeField(auto_now=True)
-
-    class Meta:
-        unique_together = ('emp', 'year')
-        ordering = ['year']
-
-    def __str__(self):
-        return f"Yearly Calendar for {self.emp} - {self.year}"
-
-    def populate_calendar(self, holidays, weekends, attendance, leave_requests):
-        """
-        Populate the calendar with holidays, weekends, attendance, and leave requests.
-        """
-        start_date = date(self.year, 1, 1)
-        end_date = date(self.year, 12, 31)
-
-        current_date = start_date
-        while current_date <= end_date:
-            # Set initial status
-            day_status = 'Work'
-            remarks = None
-            leave_type = None
-
-            # Check if it's a holiday
-            if current_date in holidays:
-                day_status = 'Holiday'
-                remarks = 'Holiday'
-
-            # Check if it's a weekend
-            elif any(weekend.is_weekend(current_date) for weekend in weekends):
-                day_status = 'Weekend'
-                remarks = 'Weekend'
-
-            # Check if leave is approved for the day
-            elif any(l.start_date <= current_date <= l.end_date and l.status == 'Approved' for l in leave_requests):
-                day_status = 'Leave'
-                leave_type = next((l.leave_type.name for l in leave_requests if l.start_date <= current_date <= l.end_date and l.status == 'Approved'), None)
-                remarks = f"Leave: {leave_type}"
-
-            # Check attendance
-            elif any(a.date == current_date for a in attendance):
-                day_status = 'Present'
-                remarks = 'Attended'
-
-            # Populate the daily data
-            self.daily_data[str(current_date)] = {
-                'status': day_status,
-                'remarks': remarks,
-                'leave_type': leave_type
-            }
-
-            current_date += timedelta(days=1)
-
-        self.save()
 
