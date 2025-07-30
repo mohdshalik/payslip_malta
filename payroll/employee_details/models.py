@@ -5,11 +5,14 @@ from calendar import monthrange
 import decimal
 
 # Create your models here.
+class category(models.Model):
+    name = models.CharField(max_length=50,unique=True)
 
 
 class Employee(models.Model):
-    company = models.ForeignKey('company_details.Company', on_delete=models.CASCADE, related_name='employees')
-    emp_dept_id = models.ForeignKey('company_details.Department', on_delete=models.CASCADE, related_name='employees')
+    company = models.ForeignKey('company_details.Company', on_delete=models.CASCADE, related_name='company')
+    # emp_dept_id = models.ForeignKey('company_details.Department', on_delete=models.CASCADE, related_name='dept')
+    category=models.ForeignKey('category', on_delete=models.CASCADE, related_name='category')
     
 
     emp_code = models.CharField(max_length=50,unique=True)
@@ -149,9 +152,9 @@ class PayrollRun(models.Model):
                 for salary_component in salary_components:
                     amount = salary_component.amount or decimal.Decimal('0.00')
                     
-                    # Apply pro-rata adjustment if needed
-                    if not salary_component.component.is_fixed:
-                        amount = (amount * payslip.days_worked) / payslip.total_working_days
+                    # # Apply pro-rata adjustment if needed
+                    # if not salary_component.component.is_fixed:
+                    #     amount = (amount * payslip.days_worked) / payslip.total_working_days
                         
                     # Create payslip component
                     PayslipComponent.objects.create(
@@ -174,7 +177,7 @@ class PayrollRun(models.Model):
                 payslip.net_salary = gross_salary - total_deductions
                 payslip.save()
 
-    def __str__(self):
+    def __str__(self):  
         return f"Payroll - {self.get_month_display()} {self.year} ({self.status})"
 
 

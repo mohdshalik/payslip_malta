@@ -1,13 +1,21 @@
 from rest_framework import serializers
-from . models import Employee,SalaryComponent,Payslip,PayrollRun,EmployeeSalaryStructure,PayslipComponent
-from company_details.models import Role
+from . models import Employee,SalaryComponent,Payslip,PayrollRun,EmployeeSalaryStructure,PayslipComponent,category
+from company_details.models import Role,Company
+from company_details.serializer import CompanySerialiazer
 
 class SalaryComponentSerializer(serializers.ModelSerializer):
     class Meta:
         model = SalaryComponent
         fields = '__all__'
 
+class categorytSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = category
+        fields = '__all__'
+
 class EmployeeSerializer(serializers.ModelSerializer):
+    company = CompanySerialiazer()
+    category = categorytSerializer()
     class Meta:
         model = Employee
         fields = '__all__'
@@ -44,6 +52,8 @@ class PayrollRunSerializer(serializers.ModelSerializer):
 
 
 class PaySlipComponentSerializer(serializers.ModelSerializer):
+    component_name = serializers.CharField(source='component.name', read_only=True)
+    component_type = serializers.CharField(source='component.component_type', read_only=True)
     class Meta:
         model = PayslipComponent
         fields = '__all__'
@@ -51,7 +61,7 @@ class PaySlipComponentSerializer(serializers.ModelSerializer):
 
 class PayslipSerializer(serializers.ModelSerializer):
     payroll_run = PayrollRunSerializer(read_only=True)
-    employee = serializers.StringRelatedField()  # Displays employee's string representation
+    employee = EmployeeSerializer(read_only=True) 
     components = PaySlipComponentSerializer(many=True, read_only=True)  # Include related components
 
     class Meta:
