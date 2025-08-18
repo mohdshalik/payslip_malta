@@ -10,6 +10,10 @@ class category(models.Model):
 
 
 class Employee(models.Model):
+    Employee_type=[
+        ('part_time','Part Time'),
+        ('full_time','Full Time')
+    ]
     company = models.ForeignKey('company_details.Company', on_delete=models.CASCADE, related_name='company')
     # emp_dept_id = models.ForeignKey('company_details.Department', on_delete=models.CASCADE, related_name='dept')
     category=models.ForeignKey('category', on_delete=models.CASCADE, related_name='category')
@@ -20,6 +24,7 @@ class Employee(models.Model):
     last_name = models.CharField(max_length=50,null=True)
     address = models.CharField(max_length=100,null=True )
     email = models.EmailField(unique=True,null=True)
+    type_of_employment=models.CharField(max_length=20,choices=Employee_type)
     job_title=models.ForeignKey('company_details.Role',on_delete=models.CASCADE)
     phone_number = models.CharField(max_length=20)
     date_of_birth = models.DateField()

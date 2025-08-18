@@ -1,7 +1,7 @@
 from rest_framework import serializers
 from . models import Employee,SalaryComponent,Payslip,PayrollRun,EmployeeSalaryStructure,PayslipComponent,category
 from company_details.models import Role,Company
-from company_details.serializer import CompanySerialiazer
+from company_details.serializer import CompanySerialiazer,RoleSerializer
 
 class SalaryComponentSerializer(serializers.ModelSerializer):
     class Meta:
@@ -14,11 +14,20 @@ class categorytSerializer(serializers.ModelSerializer):
         fields = '__all__'
 
 class EmployeeSerializer(serializers.ModelSerializer):
-    company = CompanySerialiazer()
-    category = categorytSerializer()
+    company = serializers.PrimaryKeyRelatedField(queryset=Company.objects.all())
+    category = serializers.PrimaryKeyRelatedField(queryset=category.objects.all())
+    job_title = serializers.PrimaryKeyRelatedField(queryset=Role.objects.all())
+
     class Meta:
         model = Employee
         fields = '__all__'
+    def to_representation(self, instance):
+        """Customize output to show nested details"""
+        representation = super().to_representation(instance)
+        representation['company'] = CompanySerialiazer(instance.company).data
+        representation['category'] = categorytSerializer(instance.category).data
+        representation['job_title'] = RoleSerializer(instance.job_title).data
+        return representation
 class EmployeeSalaryStructureSerializer(serializers.ModelSerializer):
     emp_code = serializers.SerializerMethodField()  # Field for emp_code from emp_master
     component_name = serializers.SerializerMethodField()  # Field for name from SalaryComponent
