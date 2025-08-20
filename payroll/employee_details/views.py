@@ -1,6 +1,8 @@
 from django.shortcuts import render
 
 # Create your views here.
+from django_filters.rest_framework import DjangoFilterBackend
+from rest_framework import filters
 from rest_framework import status,generics,viewsets,permissions
 from rest_framework.decorators import action
 from rest_framework.response import Response
@@ -32,6 +34,20 @@ class SalaryComponentViewSet(viewsets.ModelViewSet):
 class EmployeeSalaryStructureViewSet(viewsets.ModelViewSet):
     queryset = EmployeeSalaryStructure.objects.all()
     serializer_class = EmployeeSalaryStructureSerializer
+    filter_backends = [DjangoFilterBackend, filters.OrderingFilter, filters.SearchFilter]
+    filterset_fields = ['employee']
+    search_fields = ['employee__emp_code']
+
+    @action(detail=False, methods=['get'])
+    def grouped(self, request):
+        data = {}
+        qs = self.filter_queryset(self.get_queryset())
+        for obj in qs:
+            emp_code = obj.employee.emp_code
+            if emp_code not in data:
+                data[emp_code] = []
+            data[emp_code].append(EmployeeSalaryStructureSerializer(obj).data)
+        return Response(data)
 
 
 
