@@ -19,6 +19,7 @@ from django.db import models
 
 class Company(models.Model):
     name = models.CharField(max_length=100)
+    employer_name = models.CharField(max_length=100)
     address = models.TextField()
     tax_id = models.CharField(max_length=50, unique=True)
     registration_number = models.CharField(max_length=50, blank=True)
