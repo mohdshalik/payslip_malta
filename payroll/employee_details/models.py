@@ -104,17 +104,15 @@ class PayrollRun(models.Model):
     year = models.IntegerField(help_text="Year of the payroll period")
     payment_date = models.DateField(null=True, blank=True, help_text="When employees will be paid")
     # branch = models.ForeignKey('OrganisationManager.brnch_mstr', on_delete=models.SET_NULL, null=True, blank=True)
-    department = models.ForeignKey('company_details.Department', on_delete=models.SET_NULL, null=True, blank=True)
+    # department = models.ForeignKey('company_details.Department', on_delete=models.SET_NULL, null=True, blank=True)
     # category = models.ForeignKey('OrganisationManager.ctgry_master', on_delete=models.SET_NULL, null=True, blank=True)
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending')
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
     def get_employees(self):
-        employees = Employee.objects.all()
-        if self.department:
-            employees = employees.filter(emp_dept_id=self.department)
-        return employees
+    # Return all employees, no department restriction
+        return Employee.objects.all()
 
     def save(self, *args, **kwargs):
         is_new = self._state.adding
