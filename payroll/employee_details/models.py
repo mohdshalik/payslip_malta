@@ -63,7 +63,7 @@ class SalaryComponent(models.Model):
 class EmployeeSalaryStructure(models.Model):
     employee = models.ForeignKey(Employee, on_delete=models.CASCADE, related_name='salary_structures')
     component = models.ForeignKey(SalaryComponent, on_delete=models.CASCADE, related_name='employee_components')
-    amount = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True,
+    amount = models.DecimalField(max_digits=10, decimal_places=4, null=True, blank=True,
                                  help_text="Amount for this component")
     is_active = models.BooleanField(default=True, help_text="Is this component active for the employee?")
     date_created = models.DateTimeField(auto_now_add=True)
@@ -187,10 +187,10 @@ class PayrollRun(models.Model):
 class Payslip(models.Model):
     payroll_run = models.ForeignKey(PayrollRun, on_delete=models.CASCADE, related_name='payslips')
     employee = models.ForeignKey(Employee, on_delete=models.CASCADE, related_name='payslips')
-    gross_salary = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)  # Added
-    net_salary = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
-    total_deductions = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
-    total_additions = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
+    gross_salary = models.DecimalField(max_digits=10, decimal_places=4, null=True, blank=True)  # Added
+    net_salary = models.DecimalField(max_digits=10, decimal_places=4, null=True, blank=True)
+    total_deductions = models.DecimalField(max_digits=10, decimal_places=4, default=0.00)
+    total_additions = models.DecimalField(max_digits=10, decimal_places=4, default=0.00)
     status = models.CharField(max_length=20, choices=[('pending', 'Pending'), ('paid', 'Paid')], default='pending')
     created_at = models.DateTimeField(auto_now_add=True)
     # New fields for working days
@@ -202,7 +202,7 @@ class Payslip(models.Model):
 class PayslipComponent(models.Model):
     payslip = models.ForeignKey(Payslip, on_delete=models.CASCADE, related_name='components')
     component = models.ForeignKey(SalaryComponent, on_delete=models.CASCADE)
-    amount = models.DecimalField(max_digits=10, decimal_places=2)
+    amount = models.DecimalField(max_digits=10, decimal_places=4)
 
     def __str__(self):
         return f"{self.payslip.employee} - {self.component.name} ({self.amount})"
