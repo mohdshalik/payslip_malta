@@ -124,6 +124,8 @@ class PayrollRun(models.Model):
     def generate_payslips(self):
         # Get total working days in the month
         total_days = monthrange(self.year, self.month)[1]
+        from_date = date(self.year, self.month, 1)
+        to_date = date(self.year, self.month, total_days)
         
         # Get all employees based on department filter
         employees = self.get_employees()
@@ -147,6 +149,8 @@ class PayrollRun(models.Model):
                     payroll_run=self,
                     employee=employee,
                     total_working_days=total_days,
+                    from_date=from_date,
+                    to_date=to_date,
                     # days_worked=total_days,  # Assuming full attendance, modify as needed
                     status='pending'
                 )
@@ -195,6 +199,8 @@ class Payslip(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     # New fields for working days
     total_working_days = models.PositiveIntegerField(default=0, help_text="Total working days in the payroll period")
+    from_date = models.DateField(null=True, blank=True, help_text="Start date of payroll period")
+    to_date = models.DateField(null=True, blank=True, help_text="End date of payroll period")
     # days_worked = models.PositiveIntegerField(default=0, help_text="Number of days the employee worked")
     # pro_rata_adjustment = models.DecimalField(max_digits=10, decimal_places=2, default=0.00,
     #              
