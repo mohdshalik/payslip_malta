@@ -50,8 +50,9 @@ class SalaryComponent(models.Model):
     name = models.CharField(max_length=100, unique=True)  # Component name (e.g., HRA, PF)
     component_type = models.CharField(max_length=20, choices=COMPONENT_TYPES)
     code = models.CharField(max_length=20, null=True)
-    deduct_leave = models.BooleanField(default=False)
+    #deduct_leave = models.BooleanField(default=False)
     is_fixed = models.BooleanField(default=True, help_text="Is this component fixed (True) or variable (False)?")
+    for_formula =  models.BooleanField(default=True, help_text="Is this component fixed (True) or variable (False)?")
     formula = models.CharField(max_length=255, blank=True, null=True,
                                help_text="Formula to calculate this component (e.g., 'basic_salary * 0.4')")
     description = models.TextField(blank=True, null=True)
@@ -71,6 +72,7 @@ class EmployeeSalaryStructure(models.Model):
 
     class Meta:
         unique_together = ('employee', 'component')  # Ensure no duplicate components for an employee
+        ordering = ['date_created']
 
     def __str__(self):
         return f"{self.employee} - {self.component.name} ({self.amount})"
@@ -122,67 +124,71 @@ class PayrollRun(models.Model):
             self.generate_payslips()
 
     def generate_payslips(self):
-        # Get total working days in the month
         total_days = monthrange(self.year, self.month)[1]
-        from_date = date(self.year, self.month, 1)
-        to_date = date(self.year, self.month, total_days)
-        
-        # Get all employees based on department filter
+        month_start = date(self.year, self.month, 1)
+        month_end = date(self.year, self.month, total_days)
+
         employees = self.get_employees()
-        
+
         for employee in employees:
-            # Check if payslip already exists for this employee and payroll run
-            if not Payslip.objects.filter(payroll_run=self, employee=employee).exists():
-                # Get employee salary structure
-                salary_components = EmployeeSalaryStructure.objects.filter(
-                    employee=employee, 
-                    is_active=True
+            # Skip if joined after payroll month
+            if employee.hired_date > month_end:
+                continue
+
+            # Effective start date for this employee
+            from_date = max(employee.hired_date, month_start)
+            days_worked = (month_end - from_date).days + 1
+
+            # Prevent duplicate payslips
+            if Payslip.objects.filter(payroll_run=self, employee=employee).exists():
+                continue
+
+            salary_components = EmployeeSalaryStructure.objects.filter(
+                employee=employee, 
+                is_active=True
+            )
+
+            total_deductions = decimal.Decimal('0.00')
+            total_additions = decimal.Decimal('0.00')
+            gross_salary = decimal.Decimal('0.00')
+
+            # Create payslip
+            payslip = Payslip.objects.create(
+                payroll_run=self,
+                employee=employee,
+                total_working_days=total_days,
+                from_date=month_start,
+                to_date=month_end,
+                days_worked=days_worked,
+                status='pending'
+            )
+
+            # Process salary components
+            for salary_component in salary_components:
+                amount = salary_component.amount or decimal.Decimal('0.00')
+
+                if not salary_component.component.is_fixed:
+                    # prorate based on days worked
+                    amount = (amount * days_worked) / total_days
+
+                PayslipComponent.objects.create(
+                    payslip=payslip,
+                    component=salary_component.component,
+                    amount=amount
                 )
-                
-                # Calculate totals
-                gross_salary = decimal.Decimal('0.00')
-                total_deductions = decimal.Decimal('0.00')
-                total_additions = decimal.Decimal('0.00')
-                
-                # Create payslip
-                payslip = Payslip.objects.create(
-                    payroll_run=self,
-                    employee=employee,
-                    total_working_days=total_days,
-                    from_date=from_date,
-                    to_date=to_date,
-                    # days_worked=total_days,  # Assuming full attendance, modify as needed
-                    status='pending'
-                )
-                
-                # Process each salary component
-                for salary_component in salary_components:
-                    amount = salary_component.amount or decimal.Decimal('0.00')
-                    
-                    # # Apply pro-rata adjustment if needed
-                    # if not salary_component.component.is_fixed:
-                    #     amount = (amount * payslip.days_worked) / payslip.total_working_days
-                        
-                    # Create payslip component
-                    PayslipComponent.objects.create(
-                        payslip=payslip,
-                        component=salary_component.component,
-                        amount=amount
-                    )
-                    
-                    # Update totals based on component type
-                    if salary_component.component.component_type == 'addition':
-                        total_additions += amount
-                        gross_salary += amount
-                    elif salary_component.component.component_type == 'deduction':
-                        total_deductions += amount
-                
-                # Update payslip with calculated totals
-                payslip.gross_salary = gross_salary
-                payslip.total_additions = total_additions
-                payslip.total_deductions = total_deductions
-                payslip.net_salary = gross_salary - total_deductions
-                payslip.save()
+
+                if salary_component.component.component_type == 'addition':
+                    total_additions += amount
+                    gross_salary += amount
+                elif salary_component.component.component_type == 'deduction':
+                    total_deductions += amount
+
+            # Update payslip totals
+            payslip.gross_salary = gross_salary
+            payslip.total_additions = total_additions
+            payslip.total_deductions = total_deductions
+            payslip.net_salary = gross_salary - total_deductions
+            payslip.save()
 
     def __str__(self):  
         return f"Payroll - {self.get_month_display()} {self.year} ({self.status})"
@@ -201,6 +207,7 @@ class Payslip(models.Model):
     total_working_days = models.PositiveIntegerField(default=0, help_text="Total working days in the payroll period")
     from_date = models.DateField(null=True, blank=True, help_text="Start date of payroll period")
     to_date = models.DateField(null=True, blank=True, help_text="End date of payroll period")
+    days_worked = models.IntegerField(default=0)
     # days_worked = models.PositiveIntegerField(default=0, help_text="Number of days the employee worked")
     # pro_rata_adjustment = models.DecimalField(max_digits=10, decimal_places=2, default=0.00,
     #              
