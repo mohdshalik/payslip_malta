@@ -3,6 +3,7 @@ from datetime import datetime, timedelta,timezone, time,date
 from django.contrib.auth.models import User
 from calendar import monthrange 
 import decimal
+from decimal import Decimal
 
 # Create your models here.
 class category(models.Model):
@@ -47,15 +48,33 @@ class SalaryComponent(models.Model):
         ('others', 'Others'),
     ]
 
-    name = models.CharField(max_length=100, unique=True)  # Component name (e.g., HRA, PF)
+    FS5_CATEGORIES = [
+        (None, 'Not Applicable'),
+        ('C1a', 'Overtime'),
+        ('C3', 'Fringe Benefits'),
+        ('D1', 'Tax Deductions (Main)'),
+        ('D2', 'Tax Deductions (Overtime)'),
+        ('D3', 'Tax Deductions (Part-time)'),
+        ('D4', 'Tax Arrears'),
+        ('D6', 'Social Security Contributions'),
+        ('D7', 'Maternity Fund'),
+    ]
+
+    name = models.CharField(max_length=100, unique=True)
     component_type = models.CharField(max_length=20, choices=COMPONENT_TYPES)
     code = models.CharField(max_length=20, null=True)
-    #deduct_leave = models.BooleanField(default=False)
-    is_fixed = models.BooleanField(default=True, help_text="Is this component fixed (True) or variable (False)?")
-    for_formula =  models.BooleanField(default=True, help_text="Is this component fixed (True) or variable (False)?")
-    formula = models.CharField(max_length=255, blank=True, null=True,
-                               help_text="Formula to calculate this component (e.g., 'basic_salary * 0.4')")
+    is_fixed = models.BooleanField(default=True)
+    for_formula = models.BooleanField(default=True)
+    formula = models.CharField(max_length=255, blank=True, null=True)
     description = models.TextField(blank=True, null=True)
+
+    # New FS5 mapping field
+    fs5_related =models.BooleanField(default=False)
+    fs5_category = models.CharField(
+        max_length=10, choices=FS5_CATEGORIES,
+        null=True, blank=True,
+        help_text="If this component contributes to FS5, select the appropriate field."
+    )
 
     def __str__(self):
         return f"{self.name} ({self.get_component_type_display()})"
@@ -220,5 +239,37 @@ class PayslipComponent(models.Model):
     def __str__(self):
         return f"{self.payslip.employee} - {self.component.name} ({self.amount})"
     
+    
+class FS5Report(models.Model):
+    year = models.PositiveIntegerField()
+    month = models.PositiveIntegerField(null=True, blank=True)  # optional if you want monthly FS5
+    created_at = models.DateTimeField(auto_now_add=True)
 
+    # Payer info (from Company/Employer model normally)
+    business_name = models.CharField(max_length=255)
+    address = models.TextField(blank=True, null=True)
+    payer_vat_no = models.CharField(max_length=50, blank=True, null=True)
+
+    # Totals (aggregated from Payslip + PayslipComponent)
+    number_of_payees_main = models.PositiveIntegerField(default=0)  # B1
+    number_of_payees_parttime = models.PositiveIntegerField(default=0)  # B2
+
+    gross_emoluments_main = models.DecimalField(max_digits=12, decimal_places=2, default=Decimal("0.00"))  # C1
+    overtime = models.DecimalField(max_digits=12, decimal_places=2, default=Decimal("0.00"))  # C1a
+    gross_emoluments_parttime = models.DecimalField(max_digits=12, decimal_places=2, default=Decimal("0.00"))  # C2
+    fringe_benefits = models.DecimalField(max_digits=12, decimal_places=2, default=Decimal("0.00"))  # C3
+    total_gross_emoluments = models.DecimalField(max_digits=12, decimal_places=2, default=Decimal("0.00"))  # C4
+
+    tax_deductions_main = models.DecimalField(max_digits=12, decimal_places=2, default=Decimal("0.00"))  # D1
+    tax_deductions_overtime = models.DecimalField(max_digits=12, decimal_places=2, default=Decimal("0.00"))  # D2
+    tax_deductions_parttime = models.DecimalField(max_digits=12, decimal_places=2, default=Decimal("0.00"))  # D3
+    tax_deductions_arrears = models.DecimalField(max_digits=12, decimal_places=2, default=Decimal("0.00"))  # D4
+    total_tax_deductions = models.DecimalField(max_digits=12, decimal_places=2, default=Decimal("0.00"))  # D5
+
+    ssc_contributions = models.DecimalField(max_digits=12, decimal_places=2, default=Decimal("0.00"))  # D6
+    maternity_fund = models.DecimalField(max_digits=12, decimal_places=2, default=Decimal("0.00"))  # D7
+    total_due_commissioner = models.DecimalField(max_digits=12, decimal_places=2, default=Decimal("0.00"))  # D8
+
+    def __str__(self):
+        return f"FS5 - {self.month or ''}/{self.year}"
 
