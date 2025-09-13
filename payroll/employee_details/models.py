@@ -11,35 +11,54 @@ class category(models.Model):
 
 
 class Employee(models.Model):
-    Employee_type=[
-        ('part_time','Part Time'),
-        ('full_time','Full Time')
+    Employee_type = [
+        ('part_time', 'Part Time'),
+        ('full_time', 'Full Time')
     ]
-    company = models.ForeignKey('company_details.Company', on_delete=models.CASCADE, related_name='company')
-    # emp_dept_id = models.ForeignKey('company_details.Department', on_delete=models.CASCADE, related_name='dept')
-    category=models.ForeignKey('category', on_delete=models.CASCADE, related_name='category')
-    
 
-    emp_code = models.CharField(max_length=50,unique=True)
-    first_name = models.CharField(max_length=50,null=True)
-    last_name = models.CharField(max_length=50,null=True)
-    address = models.CharField(max_length=100,null=True )
-    email = models.EmailField(unique=True,null=True)
-    type_of_employment=models.CharField(max_length=20,choices=Employee_type)
-    job_title=models.ForeignKey('company_details.Role',on_delete=models.CASCADE)
-    phone_number = models.CharField(max_length=20)
-    date_of_birth = models.DateField()
-    hired_date = models.DateField()
-    social_security_no = models.CharField(max_length=50,unique=True,null=True)
-    Tax_Registration_Number = models.CharField(max_length=50,unique=True,null=True)
-    Bank_Account_Number = models.CharField(max_length=50,unique=True)
+    company = models.ForeignKey(
+        'company_details.Company',
+        on_delete=models.CASCADE,
+        related_name='company',
+        null=True, blank=True
+    )
+    category = models.ForeignKey(
+        'category',
+        on_delete=models.CASCADE,
+        related_name='category',
+        null=True, blank=True
+    )
+
+    emp_code = models.CharField(max_length=50, unique=True)  # REQUIRED
+    first_name = models.CharField(max_length=50)  # REQUIRED
+    address = models.CharField(max_length=100)  # REQUIRED
+
+    last_name = models.CharField(max_length=50, null=True, blank=True)
+    email = models.EmailField(unique=True, null=True, blank=True)
+    type_of_employment = models.CharField(
+        max_length=20,
+        choices=Employee_type,
+        null=True, blank=True
+    )
+    job_title = models.ForeignKey(
+        'company_details.Role',
+        on_delete=models.CASCADE,
+        null=True, blank=True
+    )
+    phone_number = models.CharField(max_length=20, null=True, blank=True)
+    date_of_birth = models.DateField(null=True, blank=True)
+    hired_date = models.DateField(null=True, blank=True)
+    social_security_no = models.CharField(max_length=50, unique=True, null=True, blank=True)
+    Tax_Registration_Number = models.CharField(max_length=50, unique=True, null=True, blank=True)
+    Bank_Account_Number = models.CharField(max_length=50, unique=True, null=True, blank=True)
+
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     fss_status = models.CharField(max_length=10, null=True, blank=True)
     is_active = models.BooleanField(default=True)
-    def __str__(self):
-        return f"{self.first_name} {self.last_name}"
 
+    def __str__(self):
+        return f"{self.first_name} {self.last_name or ''}"
 
 class SalaryComponent(models.Model):
     COMPONENT_TYPES = [
