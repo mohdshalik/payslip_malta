@@ -13,7 +13,7 @@ router.register(r'PayrollRun', PayrollRunViewSet)
 # router.register(r'PayrollFormula', PayrollFormulaViewSet)
 router.register(r'payslip', PayslipViewSet)
 router.register(r'PayslipComponent', PayslipComponentViewSet)
-router.register(r'FS5ReportViewSet',FS5ReportViewSet)
+# router.register(r'FS5ReportViewSet',FS5ReportViewSet)
 
 
 

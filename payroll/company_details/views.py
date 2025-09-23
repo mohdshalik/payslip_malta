@@ -1,7 +1,7 @@
 from django.shortcuts import render
-from  .models import Company,Department,Role
+from  .models import Company,Department,Role,FS5Form
 from django.contrib.auth.models import User
-from .serializer import CompanySerialiazer,DepartmentSerialiazer,UserSerializer,RoleSerializer
+from .serializer import CompanySerialiazer,DepartmentSerialiazer,UserSerializer,RoleSerializer,FS5FormSerializer
 from rest_framework import viewsets
 
 class UserViewSet(viewsets.ModelViewSet):
@@ -23,3 +23,7 @@ class DepartmentViewSet(viewsets.ModelViewSet):
 class RoleViewSet(viewsets.ModelViewSet):
     queryset = Role.objects.all()
     serializer_class = RoleSerializer
+
+class FS5ReportViewSet(viewsets.ModelViewSet):
+    queryset = FS5Form.objects.all()
+    serializer_class = FS5FormSerializer

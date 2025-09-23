@@ -1,6 +1,6 @@
 from rest_framework import serializers
 from django.contrib.auth.models import User
-from .models import Company,Department,Role
+from .models import Company,Department,Role,FS5Form
 
 
 class UserSerializer(serializers.ModelSerializer):
@@ -40,4 +40,11 @@ class RoleSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Role
+        fields = '__all__'
+
+
+class FS5FormSerializer(serializers.ModelSerializer):
+
+    class Meta:
+        model = FS5Form
         fields = '__all__'
