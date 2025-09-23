@@ -79,6 +79,7 @@ class FS5Form(models.Model):
     total_payment = models.DecimalField(max_digits=12, decimal_places=2, default=0)
     cheque_bank = models.CharField(max_length=255, blank=True, null=True)  # E2
     cheque_no = models.CharField(max_length=50, blank=True, null=True)
+    branch = models.CharField(max_length=50, blank=True, null=True)
     bank_account_no = models.CharField(max_length=50, blank=True, null=True)  # E3
 
     person_paying = models.CharField(max_length=255, blank=True, null=True)
