@@ -1,6 +1,6 @@
 from django.urls import path, include
 from rest_framework.routers import DefaultRouter
-from . views import SalaryComponentViewSet,EmployeeSalaryStructureViewSet,PayrollRunViewSet,PayslipViewSet,PayslipComponentViewSet,EmployeeViewSet,RoleViewSet,categoryViewSet,FS5ReportViewSet
+from . views import SalaryComponentViewSet,EmployeeSalaryStructureViewSet,PayrollRunViewSet,PayslipViewSet,PayslipComponentViewSet,EmployeeViewSet,RoleViewSet,categoryViewSet
 router = DefaultRouter()
 
 # router = DefaultRouter()
@@ -13,7 +13,6 @@ router.register(r'PayrollRun', PayrollRunViewSet)
 # router.register(r'PayrollFormula', PayrollFormulaViewSet)
 router.register(r'payslip', PayslipViewSet)
 router.register(r'PayslipComponent', PayslipComponentViewSet)
-# router.register(r'FS5ReportViewSet',FS5ReportViewSet)
 
 
 

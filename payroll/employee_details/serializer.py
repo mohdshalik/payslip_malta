@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from . models import Employee,SalaryComponent,Payslip,PayrollRun,EmployeeSalaryStructure,PayslipComponent,category,FS5Report
+from . models import Employee,SalaryComponent,Payslip,PayrollRun,EmployeeSalaryStructure,PayslipComponent,category
 from company_details.models import Role,Company
 from company_details.serializer import CompanySerialiazer,RoleSerializer
 
@@ -85,9 +85,3 @@ class RoleSerializer(serializers.ModelSerializer):
         model = Role
         fields = '__all__'
     
-
-class FS5ReportSerializer(serializers.ModelSerializer):
-
-    class Meta:
-        model = FS5Report
-        fields = '__all__'

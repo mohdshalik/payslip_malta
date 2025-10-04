@@ -8,8 +8,8 @@ from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.response import Response
 import datetime
-from .models import SalaryComponent,EmployeeSalaryStructure,Payslip,PayslipComponent,Employee,PayrollRun,Employee,category,FS5Report
-from .serializer import SalaryComponentSerializer,EmployeeSalaryStructureSerializer,PayslipSerializer,PaySlipComponentSerializer,PayrollRunSerializer,EmployeeSerializer,categorytSerializer,FS5ReportSerializer
+from .models import SalaryComponent,EmployeeSalaryStructure,Payslip,PayslipComponent,Employee,PayrollRun,Employee,category
+from .serializer import SalaryComponentSerializer,EmployeeSalaryStructureSerializer,PayslipSerializer,PaySlipComponentSerializer,PayrollRunSerializer,EmployeeSerializer,categorytSerializer
 from company_details.models import Role
 from company_details.serializer import RoleSerializer
 # Create your views here.
@@ -80,6 +80,3 @@ class PayrollRunViewSet(viewsets.ModelViewSet):
 
 
 
-class FS5ReportViewSet(viewsets.ModelViewSet):
-    queryset = FS5Report.objects.all()
-    serializer_class = FS5ReportSerializer
