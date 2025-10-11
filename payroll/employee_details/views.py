@@ -54,6 +54,19 @@ class EmployeeSalaryStructureViewSet(viewsets.ModelViewSet):
 class PayslipViewSet(viewsets.ModelViewSet):
     queryset = Payslip.objects.all()
     serializer_class = PayslipSerializer
+    @action(detail=True, methods=['get'], url_path='download-fs5')
+    def download_fs5(self, request, pk=None):
+        payslip = self.get_object()
+        employee = payslip.employee
+        payroll_run = payslip.payroll_run
+
+        file_name = f"FS5_{employee.emp_code}_{payroll_run.month}_{payroll_run.year}.pdf"
+        file_path = os.path.join(settings.MEDIA_ROOT, "fs5", file_name)
+
+        if os.path.exists(file_path):
+            return FileResponse(open(file_path, 'rb'), content_type='application/pdf')
+
+        return Response({'error': f'FS5 file not found for employee {employee.emp_code}'}, status=404)
 
 
 
@@ -77,14 +90,14 @@ class PayrollRunViewSet(viewsets.ModelViewSet):
         
         payroll_run.generate_payslips()
         return Response({'status': 'Payslips generated successfully'})
-    @action(detail=True, methods=['get'], url_path='download-fs5')
-    def download_fs5(self, request, pk=None):
-        payroll_run = self.get_object()
-        company = payroll_run.get_employees().first().company
-        file_path = os.path.join(settings.MEDIA_ROOT, "fs5", f"FS5_{company.name}_{payroll_run.month}_{payroll_run.year}.pdf")
-        if os.path.exists(file_path):
-            return FileResponse(open(file_path, 'rb'), content_type='application/pdf')
-        return Response({'error': 'FS5 file not found'}, status=404)
+    # @action(detail=True, methods=['get'], url_path='download-fs5')
+    # def download_fs5(self, request, pk=None):
+    #     payroll_run = self.get_object()
+    #     company = payroll_run.get_employees().first().company
+    #     file_path = os.path.join(settings.MEDIA_ROOT, "fs5", f"FS5_{company.name}_{payroll_run.month}_{payroll_run.year}.pdf")
+    #     if os.path.exists(file_path):
+    #         return FileResponse(open(file_path, 'rb'), content_type='application/pdf')
+    #     return Response({'error': 'FS5 file not found'}, status=404)
     # @action(detail=True, methods=["get"])
     # def fs5_zip(self, request, pk=None):
     #     payroll_run = self.get_object()
