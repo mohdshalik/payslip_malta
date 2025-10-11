@@ -23,40 +23,35 @@ def generate_fs5_for_employee(employee, payroll_run, payslip, output_dir=None):
     # C Section (untitled10 - untitled13)
     # D Section (untitled15 - untitled18, untitled20 - untitled21)
     FS5_FIELD_MAP = {
-        "C1": "untitled10",  # Gross Emoluments (FSS Main/Other)
-        "C1a": "untitled11",  # Overtime (eligible for 15% tax)
-        "C2": "untitled12",  # Gross Emoluments (FSS Part-time)
-        "C3": "untitled13",  # Taxable Fringe Benefits
+    "C1a": "untitled10",   # Overtime (eligible for 15% tax)
+    "C2": "untitled11",    # Gross Emoluments
+    "C3": "untitled12",    # Fringe Benefits
+    "D1": "untitled14",    # Tax Deductions (Main/Other)
+    "D2": "untitled15",    # Tax Deductions (Part-time)
+    "D3": "untitled16",    # Tax Arrears
+    "D5": "untitled18",    # Social Security
+    "D5a": "untitled19",   # Maternity Fund
+}
 
-        "D1": "untitled15",  # Tax Deductions (FSS Main/Other)
-        "D1a": "untitled16", # Tax Deductions (Eligible overtime income)
-        "D2": "untitled17",  # Tax Deductions (FSS Part-time)
-        "D3": "untitled18",  # Tax Arrears Deductions
-
-        "D5": "untitled20",  # Social Security Contributions
-        "D5a": "untitled21",  # Maternity Fund Contributions
-    }
 
     # ✅ Initialize base fields (A, B sections)
     field_values = {
-        # A Section – Company Info (untitled1 to untitled7)
-        "untitled1": company.name or "",
-        "untitled2": company.address or "",
-        "untitled3": getattr(company, "post_code", "") or "", # Postal Code
-        "untitled4": company.phone_number or "", # Telephone Number
-        "untitled5": getattr(company, "fax_number", "") or "", # Fax Number
-        "untitled6": getattr(company, "pe_number", company.tax_id) or "", # Payer P.E. No.
-        # Assuming payroll_run has get_month_display()
-        "untitled7": f"{payroll_run.get_month_display()} {payroll_run.year}", 
+    # Section A: Company info
+    "untitled1": company.name or "",
+    "untitled2": company.address or "",
+    "untitled3": getattr(company, "post_code", "") or "",
+    "untitled4": company.phone_number or "",
+    "untitled5": "",
+    "untitled6": getattr(company, "pe_number", company.tax_id) or "",
+    "untitled7": f"{payroll_run.get_month_display()} {payroll_run.year}",
 
-        # B Section – Payee Counts (untitled8, untitled9)
-        # These need to be dynamically calculated in a real app, but 1 is used as placeholder
-        "untitled8": 1, # Number of Payees (Main/Other)
-        "untitled9": 1, # Number of Payees (Part-time)
+    # Section B: Number of payees
+    "untitled8": 1,  # Main/Other
+    "untitled9": 1,  # Part-time
 
-        # Initialize all component and calculation fields to 0 (untitled10 to untitled23)
-        **{f"untitled{i}": 0.0 for i in range(10, 24)},
-    }
+    # Initialize all numeric fields (10–21) to 0
+    **{f"untitled{i}": 0.0 for i in range(10, 22)},
+}
 
     print(f"\n📄 Generating FS5 for Employee: {employee.emp_code} ({employee.first_name})")
 

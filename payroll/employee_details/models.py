@@ -72,22 +72,16 @@ class SalaryComponent(models.Model):
 
     # ✅ CORRECTED FS5 CATEGORIES: Now mapping to the distinct fields in Section C and D of FS5.
     FS5_CATEGORIES = [
-        (None, 'Not Applicable'),
-        # C Section - Gross Emoluments
-        ('C1', 'Gross Emoluments (FSS Main/Other)'), # untitled10
-        ('C1a', 'Overtime (Eligible for 15% tax)'), # untitled11
-        ('C2', 'Gross Emoluments (FSS Part-time)'), # untitled12
-        ('C3', 'Taxable Fringe Benefits'), # untitled13
-
-        # D Section - Tax Deductions and SSC
-        ('D1', 'Tax Deductions (FSS Main/Other)'), # untitled15
-        ('D1a', 'Tax Deductions (Eligible Overtime)'), # untitled16
-        ('D2', 'Tax Deductions (FSS Part-time)'), # untitled17
-        ('D3', 'Tax Arrears Deductions'), # untitled18
-        ('D5', 'Social Security Contributions'), # untitled20
-        ('D5a', 'Maternity Fund Contributions'), # untitled21
-    ]
-    
+    (None, 'Not Applicable'),
+    ('C1a', 'Overtime (eligible for 15% tax deduction)'),
+    ('C2', 'Gross Emoluments (FSS Main/Other)'),
+    ('C3', 'Taxable Fringe Benefits'),
+    ('D1', 'Tax Deductions (FSS Main/Other)'),
+    ('D2', 'Tax Deductions (FSS Part-time)'),
+    ('D3', 'Tax Arrears'),
+    ('D5', 'Social Security Contributions'),
+    ('D5a', 'Maternity Fund Contributions'),
+]
     name = models.CharField(max_length=100, unique=True)
     component_type = models.CharField(max_length=20, choices=COMPONENT_TYPES)
     code = models.CharField(max_length=20, null=True)
