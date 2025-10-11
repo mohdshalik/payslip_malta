@@ -77,6 +77,38 @@ class PayrollRunViewSet(viewsets.ModelViewSet):
         
         payroll_run.generate_payslips()
         return Response({'status': 'Payslips generated successfully'})
+    @action(detail=True, methods=['get'], url_path='download-fs5')
+    def download_fs5(self, request, pk=None):
+        payroll_run = self.get_object()
+        company = payroll_run.get_employees().first().company
+        file_path = os.path.join(settings.MEDIA_ROOT, "fs5", f"FS5_{company.name}_{payroll_run.month}_{payroll_run.year}.pdf")
+        if os.path.exists(file_path):
+            return FileResponse(open(file_path, 'rb'), content_type='application/pdf')
+        return Response({'error': 'FS5 file not found'}, status=404)
+    # @action(detail=True, methods=["get"])
+    # def fs5_zip(self, request, pk=None):
+    #     payroll_run = self.get_object()
+
+    #     # ensure payslips exist
+    #     payslips = payroll_run.payslips.all()
+    #     if not payslips.exists():
+    #         return Response({"error": "No payslips found for this run"}, status=404)
+
+    #     # temp zip file path
+    #     zip_path = os.path.join(
+    #         settings.MEDIA_ROOT,
+    #         f"fs5_zip/PayrollRun_{payroll_run.id}_FS5.zip"
+    #     )
+    #     os.makedirs(os.path.dirname(zip_path), exist_ok=True)
+
+    #     with zipfile.ZipFile(zip_path, "w") as zipf:
+    #         for payslip in payslips:
+    #             if payslip.fs5_pdf:
+    #                 file_path = payslip.fs5_pdf.path
+    #                 arcname = os.path.basename(file_path)
+    #                 zipf.write(file_path, arcname=arcname)
+
+    #     return FileResponse(open(zip_path, "rb"), as_attachment=True, filename=os.path.basename(zip_path))
 
 
 

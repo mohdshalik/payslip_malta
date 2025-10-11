@@ -4,7 +4,9 @@ from django.contrib.auth.models import User
 from calendar import monthrange 
 import decimal
 from decimal import Decimal
-from simpleeval import simple_eval
+from simpleeval import simple_eval  
+import os
+from .utils import generate_fs5_for_employee
 
 # Create your models here.
 class category(models.Model):
@@ -68,18 +70,24 @@ class SalaryComponent(models.Model):
         ('others', 'Others'),
     ]
 
+    # ✅ CORRECTED FS5 CATEGORIES: Now mapping to the distinct fields in Section C and D of FS5.
     FS5_CATEGORIES = [
         (None, 'Not Applicable'),
-        ('C1a', 'Overtime'),
-        ('C3', 'Fringe Benefits'),
-        ('D1', 'Tax Deductions (Main)'),
-        ('D2', 'Tax Deductions (Overtime)'),
-        ('D3', 'Tax Deductions (Part-time)'),
-        ('D4', 'Tax Arrears'),
-        ('D6', 'Social Security Contributions'),
-        ('D7', 'Maternity Fund'),
-    ]
+        # C Section - Gross Emoluments
+        ('C1', 'Gross Emoluments (FSS Main/Other)'), # untitled10
+        ('C1a', 'Overtime (Eligible for 15% tax)'), # untitled11
+        ('C2', 'Gross Emoluments (FSS Part-time)'), # untitled12
+        ('C3', 'Taxable Fringe Benefits'), # untitled13
 
+        # D Section - Tax Deductions and SSC
+        ('D1', 'Tax Deductions (FSS Main/Other)'), # untitled15
+        ('D1a', 'Tax Deductions (Eligible Overtime)'), # untitled16
+        ('D2', 'Tax Deductions (FSS Part-time)'), # untitled17
+        ('D3', 'Tax Arrears Deductions'), # untitled18
+        ('D5', 'Social Security Contributions'), # untitled20
+        ('D5a', 'Maternity Fund Contributions'), # untitled21
+    ]
+    
     name = models.CharField(max_length=100, unique=True)
     component_type = models.CharField(max_length=20, choices=COMPONENT_TYPES)
     code = models.CharField(max_length=20, null=True)
@@ -88,16 +96,16 @@ class SalaryComponent(models.Model):
     formula = models.CharField(max_length=255, blank=True, null=True)
     description = models.TextField(blank=True, null=True)
 
-    # New FS5 mapping field
-    fs5_related =models.BooleanField(default=False)
-    fs5_category = models.CharField(
-        max_length=10, choices=FS5_CATEGORIES,
+    fs5_field = models.CharField(
+        max_length=10,
+        choices=FS5_CATEGORIES,
         null=True, blank=True,
-        help_text="If this component contributes to FS5, select the appropriate field."
+        help_text="Where this component should appear on FS5 form"
     )
 
     def __str__(self):
         return f"{self.name} ({self.get_component_type_display()})"
+
 
 
 class EmployeeSalaryStructure(models.Model):
@@ -180,7 +188,6 @@ class PayrollRun(models.Model):
         print(f"Payroll month/year: {self.month}/{self.year}")
         print(f"Total working days in month: {total_days}")
 
-        # Selected components
         selected_components = self.components.all()
         print("Selected components for payroll run:")
         for c in selected_components:
@@ -190,37 +197,16 @@ class PayrollRun(models.Model):
             print(f"⚠️ No components selected for PayrollRun {self.id}")
             return
 
-        # Split into non-formula and formula components
         non_formula_components = selected_components.filter(for_formula=False)
         formula_components = selected_components.filter(for_formula=True)
         non_formula_ids = list(non_formula_components.values_list('id', flat=True))
 
-        # -----------------------------
-        # Pre-check: Print EmployeeSalaryStructure for all employees
-        # -----------------------------
-        print("\n=== Employee Salary Structures for selected non-formula components ===")
         for employee in employees:
-            structures = EmployeeSalaryStructure.objects.filter(
-                employee=employee,
-                component_id__in=non_formula_ids,
-                is_active=True
-            ).select_related("component")
-            if structures.exists():
-                print(f"Employee {employee.emp_code}:")
-                for s in structures:
-                    print(f"  - {s.component.name} = {s.amount}")
-            else:
-                print(f"Employee {employee.emp_code}: ⚠️ No matching salary structures found")
-
-        # -----------------------------
-        # Generate payslips for each employee
-        # -----------------------------
-        for employee in employees:
-            if employee.hired_date > month_end:
+            if employee.hired_date and employee.hired_date > month_end:
                 print(f"Skipping {employee.emp_code}: hired after payroll month")
                 continue
 
-            from_date = max(employee.hired_date, month_start)
+            from_date = max(employee.hired_date or month_start, month_start)
             days_worked = (month_end - from_date).days + 1
 
             if Payslip.objects.filter(payroll_run=self, employee=employee).exists():
@@ -236,11 +222,9 @@ class PayrollRun(models.Model):
                 is_active=True
             ).select_related("component")
 
-            print(f"Found {salary_structures.count()} non-formula salary structures for selected components")
-
-            total_deductions = decimal.Decimal('0.00')
-            total_additions = decimal.Decimal('0.00')
-            gross_salary = decimal.Decimal('0.00')
+            total_deductions = Decimal('0.00')
+            total_additions = Decimal('0.00')
+            gross_salary = Decimal('0.00')
 
             payslip = Payslip.objects.create(
                 payroll_run=self,
@@ -259,14 +243,14 @@ class PayrollRun(models.Model):
             # -------------------
             for structure in salary_structures:
                 comp = structure.component
-                amount = decimal.Decimal(structure.amount or 0)
+                amount = Decimal(structure.amount or 0)
                 if not comp.is_fixed:
                     amount = (amount * days_worked) / total_days
 
                 PayslipComponent.objects.create(
                     payslip=payslip,
                     component=comp,
-                    amount=amount.quantize(decimal.Decimal('0.01'))
+                    amount=amount.quantize(Decimal('0.01'))
                 )
 
                 if comp.component_type == 'addition':
@@ -281,7 +265,6 @@ class PayrollRun(models.Model):
                 print(f"Non-formula component added: {comp.name} = {amount}")
 
             context['gross_salary'] = float(gross_salary)
-            print(f"Gross salary after non-formula components: {gross_salary}")
 
             # -------------------
             # Pass 2: Formula components
@@ -289,7 +272,6 @@ class PayrollRun(models.Model):
             for comp in formula_components:
                 if not comp.formula:
                     continue
-
                 try:
                     formula = comp.formula.strip()
                     print(f"\nEvaluating formula component: {comp.name} ({comp.code})")
@@ -297,16 +279,16 @@ class PayrollRun(models.Model):
                     print(f"Context before formula: {context}")
 
                     value = simple_eval(formula, names=context)
-                    amount = decimal.Decimal(str(value))
+                    amount = Decimal(str(value))
                     print(f"Formula result: {amount}")
                 except Exception as e:
                     print(f"❌ Error evaluating formula {comp.formula} for {employee.emp_code}: {e}")
-                    amount = decimal.Decimal('0.00')
+                    amount = Decimal('0.00')
 
                 PayslipComponent.objects.create(
                     payslip=payslip,
                     component=comp,
-                    amount=amount.quantize(decimal.Decimal('0.01'))
+                    amount=amount.quantize(Decimal('0.01'))
                 )
 
                 if comp.component_type == 'addition':
@@ -318,16 +300,17 @@ class PayrollRun(models.Model):
                 if comp.code:
                     context[comp.code] = float(amount)
 
-                print(f"Formula component added: {comp.name} = {amount}")
-
             # -------------------
             # Final totals
             # -------------------
-            payslip.gross_salary = gross_salary.quantize(decimal.Decimal('0.01'))
-            payslip.total_additions = total_additions.quantize(decimal.Decimal('0.01'))
-            payslip.total_deductions = total_deductions.quantize(decimal.Decimal('0.01'))
-            payslip.net_salary = (gross_salary - total_deductions).quantize(decimal.Decimal('0.01'))
+            payslip.gross_salary = gross_salary.quantize(Decimal('0.01'))
+            payslip.total_additions = total_additions.quantize(Decimal('0.01'))
+            payslip.total_deductions = total_deductions.quantize(Decimal('0.01'))
+            payslip.net_salary = (gross_salary - total_deductions).quantize(Decimal('0.01'))
             payslip.save()
+            generate_fs5_for_employee(employee, self, payslip)
+
+
 
 
     def __str__(self):  

@@ -42,6 +42,8 @@ INSTALLED_APPS = [
     'company_details',
     'employee_details',
     'django_filters',
+    'pdfrw',
+    'fitz',
 ]
 
 MIDDLEWARE = [
