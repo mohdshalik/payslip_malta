@@ -12,6 +12,14 @@ from .models import SalaryComponent,EmployeeSalaryStructure,Payslip,PayslipCompo
 from .serializer import SalaryComponentSerializer,EmployeeSalaryStructureSerializer,PayslipSerializer,PaySlipComponentSerializer,PayrollRunSerializer,EmployeeSerializer,categorytSerializer
 from company_details.models import Role
 from company_details.serializer import RoleSerializer
+import os
+import zipfile
+from io import BytesIO
+from django.http import FileResponse, HttpResponse
+from rest_framework.decorators import action
+from rest_framework.response import Response
+from django.conf import settings
+
 # Create your views here.
 
 class EmployeeViewSet(viewsets.ModelViewSet):
@@ -54,21 +62,55 @@ class EmployeeSalaryStructureViewSet(viewsets.ModelViewSet):
 class PayslipViewSet(viewsets.ModelViewSet):
     queryset = Payslip.objects.all()
     serializer_class = PayslipSerializer
-    @action(detail=True, methods=['get'], url_path='download-fs5')
-    def download_fs5(self, request, pk=None):
-        payslip = self.get_object()
-        employee = payslip.employee
-        payroll_run = payslip.payroll_run
+    @action(detail=False, methods=['get'], url_path='download-fs5')
+    def download_fs5_report(self, request):
+        """
+        Download FS5 PDFs by month/year or for a specific employee.
+        Example:
+        /api/payrollrun/download-fs5/?month=9&year=2025
+        /api/payrollrun/download-fs5/?month=9&year=2025&employee_id=3
+        """
+        month = request.query_params.get('month')
+        year = request.query_params.get('year')
+        emp_id = request.query_params.get('employee_id')
 
-        file_name = f"FS5_{employee.emp_code}_{payroll_run.month}_{payroll_run.year}.pdf"
-        file_path = os.path.join(settings.MEDIA_ROOT, "fs5", file_name)
+        if not month or not year:
+            return Response({'error': 'Please provide month and year (e.g., ?month=9&year=2025)'}, status=400)
 
-        if os.path.exists(file_path):
+        # Build directory
+        fs5_dir = os.path.join(settings.MEDIA_ROOT, "fs5")
+        if not os.path.exists(fs5_dir):
+            return Response({'error': 'No FS5 files found.'}, status=404)
+
+        # Collect files
+        files_to_zip = []
+        for file_name in os.listdir(fs5_dir):
+            if f"_{month}_{year}" in file_name:
+                if emp_id:
+                    if f"FS5_{emp_id}_" in file_name or file_name.startswith(f"FS5_{emp_id}"):
+                        files_to_zip.append(os.path.join(fs5_dir, file_name))
+                else:
+                    files_to_zip.append(os.path.join(fs5_dir, file_name))
+
+        if not files_to_zip:
+            return Response({'error': 'No FS5 files found for the given criteria.'}, status=404)
+
+        # If only one file → return directly
+        if len(files_to_zip) == 1:
+            file_path = files_to_zip[0]
             return FileResponse(open(file_path, 'rb'), content_type='application/pdf')
 
-        return Response({'error': f'FS5 file not found for employee {employee.emp_code}'}, status=404)
+        # If multiple files → zip them
+        zip_buffer = BytesIO()
+        with zipfile.ZipFile(zip_buffer, "w", zipfile.ZIP_DEFLATED) as zip_file:
+            for file_path in files_to_zip:
+                zip_file.write(file_path, os.path.basename(file_path))
+        zip_buffer.seek(0)
 
-
+        zip_name = f"FS5_{month}_{year}.zip"
+        response = HttpResponse(zip_buffer, content_type="application/zip")
+        response['Content-Disposition'] = f'attachment; filename="{zip_name}"'
+        return response
 
 class PayslipComponentViewSet(viewsets.ModelViewSet):
     queryset = PayslipComponent.objects.all()
