@@ -19,6 +19,7 @@ from django.http import FileResponse, HttpResponse
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from django.conf import settings
+from django.http import FileResponse, StreamingHttpResponse
 
 # Create your views here.
 
@@ -62,13 +63,12 @@ class EmployeeSalaryStructureViewSet(viewsets.ModelViewSet):
 class PayslipViewSet(viewsets.ModelViewSet):
     queryset = Payslip.objects.all()
     serializer_class = PayslipSerializer
+
     @action(detail=False, methods=['get'], url_path='download-fs5')
     def download_fs5_report(self, request):
         """
         Download FS5 PDFs by month/year or for a specific employee.
-        Example:
-        /api/payrollrun/download-fs5/?month=9&year=2025
-        /api/payrollrun/download-fs5/?month=9&year=2025&employee_id=3
+        Works both for single file (PDF) and multiple (ZIP).
         """
         month = request.query_params.get('month')
         year = request.query_params.get('year')
@@ -77,12 +77,11 @@ class PayslipViewSet(viewsets.ModelViewSet):
         if not month or not year:
             return Response({'error': 'Please provide month and year (e.g., ?month=9&year=2025)'}, status=400)
 
-        # Build directory
         fs5_dir = os.path.join(settings.MEDIA_ROOT, "fs5")
         if not os.path.exists(fs5_dir):
-            return Response({'error': 'No FS5 files found.'}, status=404)
+            return Response({'error': 'No FS5 directory found.'}, status=404)
 
-        # Collect files
+        # Collect matching files
         files_to_zip = []
         for file_name in os.listdir(fs5_dir):
             if f"_{month}_{year}" in file_name:
@@ -95,21 +94,32 @@ class PayslipViewSet(viewsets.ModelViewSet):
         if not files_to_zip:
             return Response({'error': 'No FS5 files found for the given criteria.'}, status=404)
 
-        # If only one file → return directly
+        # ✅ Case 1: Only one file → serve directly
         if len(files_to_zip) == 1:
             file_path = files_to_zip[0]
-            return FileResponse(open(file_path, 'rb'), content_type='application/pdf')
+            file_name = os.path.basename(file_path)
 
-        # If multiple files → zip them
+            # Read bytes explicitly
+            with open(file_path, 'rb') as f:
+                file_data = f.read()
+
+            response = HttpResponse(file_data, content_type='application/pdf')
+            response['Content-Disposition'] = f'attachment; filename="{file_name}"'
+            response['Content-Length'] = str(len(file_data))
+            return response
+
+        # ✅ Case 2: Multiple files → create ZIP in memory
         zip_buffer = BytesIO()
         with zipfile.ZipFile(zip_buffer, "w", zipfile.ZIP_DEFLATED) as zip_file:
             for file_path in files_to_zip:
                 zip_file.write(file_path, os.path.basename(file_path))
         zip_buffer.seek(0)
+        zip_bytes = zip_buffer.getvalue()
 
         zip_name = f"FS5_{month}_{year}.zip"
-        response = HttpResponse(zip_buffer, content_type="application/zip")
+        response = HttpResponse(zip_bytes, content_type="application/zip")
         response['Content-Disposition'] = f'attachment; filename="{zip_name}"'
+        response['Content-Length'] = str(len(zip_bytes))
         return response
 
 class PayslipComponentViewSet(viewsets.ModelViewSet):

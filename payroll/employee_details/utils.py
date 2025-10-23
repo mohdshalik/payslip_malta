@@ -5,7 +5,11 @@ from decimal import Decimal
 from simpleeval import simple_eval
 
 def generate_fs5_for_employee(employee, payroll_run, payslip, output_dir=None):
+    import os
     from .models import PayslipComponent, SalaryComponent, EmployeeSalaryStructure
+    # from pypdf import PdfReader, PdfWriter, PdfName
+    # from simpleeval import simple_eval
+    from django.conf import settings
 
     if not output_dir:
         output_dir = os.path.join(getattr(settings, 'MEDIA_ROOT', 'media'), "fs5")
@@ -18,20 +22,28 @@ def generate_fs5_for_employee(employee, payroll_run, payslip, output_dir=None):
 
     company = employee.company
 
-    # ✅ Field Mapping
+    # ✅ FS5 field mapping
     FS5_FIELD_MAP = {
-        "C1a": "untitled10",   # Overtime (eligible for 15% tax)
-        "C2": "untitled11",    # Gross Emoluments
-        "C3": "untitled12",    # Fringe Benefits
-        "D1": "untitled14",    # Tax Deductions (Main)
-        "D2": "untitled15",    # Tax Deductions (Part-time)
-        "D3": "untitled16",    # Tax Arrears
-        "D5": "untitled18",    # Social Security
-        "D5a": "untitled19",   # Maternity Fund
+        "C1": "untitled10",
+        "C1a": "untitled11",
+        "C2": "untitled12",
+        "C3": "untitled13",
+        "C4": "untitled14",
+        "D1": "untitled15",
+        "D1a": "untitled16",
+        "D2": "untitled17",
+        "D3": "untitled18",
+        "D4": "untitled19",
+        "D5": "untitled20",
+        "D5a": "untitled22",
+        "D6": "untitled24"
     }
 
-    # ✅ Initialize FS5 base fields
-    field_values = {
+    # ✅ Initialize all fields
+    field_values = {v: 0.0 for v in FS5_FIELD_MAP.values()}
+
+    # Base company info
+    field_values.update({
         "untitled1": company.name or "",
         "untitled2": company.address or "",
         "untitled3": getattr(company, "post_code", "") or "",
@@ -41,35 +53,30 @@ def generate_fs5_for_employee(employee, payroll_run, payslip, output_dir=None):
         "untitled7": f"{payroll_run.get_month_display()} {payroll_run.year}",
         "untitled8": 1,  # Main/Other
         "untitled9": 1,  # Part-time
-        **{f"untitled{i}": 0.0 for i in range(10, 22)},
-    }
+    })
 
     print(f"\n📄 Generating FS5 for Employee: {employee.emp_code} ({employee.first_name})")
 
-    # ✅ 1️⃣ Start with payslip components (selected ones)
+    # ✅ 1️⃣ Payslip components
     payslip_components = PayslipComponent.objects.filter(payslip=payslip).select_related("component")
     for comp in payslip_components:
         fs5_field = comp.component.fs5_field
         if fs5_field and fs5_field in FS5_FIELD_MAP:
             pdf_field = FS5_FIELD_MAP[fs5_field]
             field_values[pdf_field] += float(comp.amount)
-            print(f"  ➕ From Payslip: {comp.component.name} ({fs5_field}) = {comp.amount}")
+            print(f"  ➕ Payslip: {comp.component.name} ({fs5_field}) = {comp.amount}")
 
-    # ✅ 2️⃣ Include all remaining FS5-linked components (even if not selected in payroll)
+    # ✅ 2️⃣ All remaining FS5-linked components
     all_fs5_components = SalaryComponent.objects.exclude(fs5_field__isnull=True).exclude(fs5_field="Not Applicable")
     emp_structures = {s.component.id: s.amount for s in EmployeeSalaryStructure.objects.filter(employee=employee)}
 
-    # Create context for formula evaluation
-    context = {}
-    for comp in payslip_components:
-        context[comp.component.code] = float(comp.amount)
+    # Context for formula evaluation
+    context = {comp.component.code: float(comp.amount) for comp in payslip_components}
 
     for comp in all_fs5_components:
-        # Skip if already included via payslip
         if any(pc.component_id == comp.id for pc in payslip_components):
             continue
 
-        # If the employee has an amount for this component
         base_amount = float(emp_structures.get(comp.id, 0))
         value = 0.0
 
@@ -86,17 +93,34 @@ def generate_fs5_for_employee(employee, payroll_run, payslip, output_dir=None):
             field_values[pdf_field] += float(value)
             print(f"  ➕ Auto Added: {comp.name} ({comp.fs5_field}) = {value}")
 
-    # ✅ Totals
-    field_values["untitled13"] = field_values["untitled10"] + field_values["untitled11"] + field_values["untitled12"]
-    field_values["untitled17"] = field_values["untitled14"] + field_values["untitled15"] + field_values["untitled16"]
-    field_values["untitled20"] = field_values["untitled17"] + field_values["untitled18"] + field_values["untitled19"]
-    field_values["untitled21"] = field_values["untitled20"]
+        # Update context for dependent formulas
+        context[comp.code] = value
+
+    # ✅ 3️⃣ Calculate totals
+    field_values[FS5_FIELD_MAP["C4"]] = (
+        field_values[FS5_FIELD_MAP["C1"]] +
+        field_values[FS5_FIELD_MAP["C1a"]] +
+        field_values[FS5_FIELD_MAP["C2"]] +
+        field_values[FS5_FIELD_MAP["C3"]]
+    )
+
+    field_values[FS5_FIELD_MAP["D4"]] = (
+        field_values[FS5_FIELD_MAP["D1"]] +
+        field_values[FS5_FIELD_MAP["D1a"]] +
+        field_values[FS5_FIELD_MAP["D2"]] +
+        field_values[FS5_FIELD_MAP["D3"]]
+    )
+
+    field_values[FS5_FIELD_MAP["D6"]] = (
+        field_values[FS5_FIELD_MAP["D5"]] +
+        field_values[FS5_FIELD_MAP["D5a"]]
+    )
 
     print("\n✅ Final FS5 Field Values:")
-    for key in sorted(field_values.keys(), key=lambda x: int(x.replace("untitled", "")) if x.startswith("untitled") else 100):
-        print(f"  {key}: {field_values[key]}")
+    for key, value in field_values.items():
+        print(f"  {key}: {value}")
 
-    # ✅ Fill PDF
+    # ✅ 4️⃣ Fill PDF
     pdf = PdfReader(template_path)
     for page in pdf.pages:
         annotations = page.get("/Annots")
@@ -117,6 +141,7 @@ def generate_fs5_for_employee(employee, payroll_run, payslip, output_dir=None):
     PdfWriter(output_pdf_path, trailer=pdf).write()
     print(f"\n📁 FS5 generated: {output_pdf_path}")
     return output_pdf_path
+
 
 
 
