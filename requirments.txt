@@ -8,3 +8,4 @@ django-filter
 simpleeval
 pdfrw 
 PyMuPDF
+pypdf
