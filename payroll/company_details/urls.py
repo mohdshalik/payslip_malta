@@ -10,9 +10,6 @@ router.register(r'department', DepartmentViewSet)
 # router.register(r'FS5ReportViewSet',FS5ReportViewSet)
 
 
-
-
-
 urlpatterns = [
     path('api/', include(router.urls)),
 ]

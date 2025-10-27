@@ -26,7 +26,10 @@ SECRET_KEY = 'django-insecure-dc4(!c1n1lz^d8_=#vt^5+)6!#*o)-9_kx#_#85)**!lotf$l6
 DEBUG = True
 
 ALLOWED_HOSTS = ['84.247.143.75','127.0.0.1','localhost']
-CSRF_TRUSTED_ORIGINS = ['http://84.247.143.75']
+CSRF_TRUSTED_ORIGINS = [
+    'http://84.247.143.75',
+    'https://84.247.143.75',
+]
 
 # Application definition
 
@@ -146,5 +149,6 @@ STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 # # Media settings
-# MEDIA_URL = '/media/'
-# MEDIA_ROOT = os.path.join(BASE_DIR, 'payroll', 'fs5')
+MEDIA_URL = '/media/'
+MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
+

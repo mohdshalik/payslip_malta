@@ -29,7 +29,7 @@ urlpatterns = [
     path('', home, name='home'),  # root route
     path('api/token/', TokenObtainPairView.as_view(), name='token_obtain_pair'),
     path('api/token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
-    path('company/', include('company_details.urls')),
+    path('company/', include('company_details.urls')),  
     path('employee/', include('employee_details.urls')),
     
 

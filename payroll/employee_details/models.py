@@ -87,7 +87,7 @@ class SalaryComponent(models.Model):
     component_type = models.CharField(max_length=20, choices=COMPONENT_TYPES)
     code = models.CharField(max_length=20, null=True)
     is_fixed = models.BooleanField(default=True)
-    for_formula = models.BooleanField(default=True)
+    for_formula = models.BooleanField(default=False)
     formula = models.CharField(max_length=255, blank=True, null=True)
     description = models.TextField(blank=True, null=True)
 
