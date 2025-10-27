@@ -70,12 +70,16 @@ class PayslipViewSet(viewsets.ModelViewSet):
         Download FS5 PDFs by month/year or for a specific employee.
         Works both for single file (PDF) and multiple (ZIP).
         """
+
         month = request.query_params.get('month')
         year = request.query_params.get('year')
         emp_id = request.query_params.get('employee_id')
 
         if not month or not year:
-            return Response({'error': 'Please provide month and year (e.g., ?month=9&year=2025)'}, status=400)
+            return Response(
+                {'error': 'Please provide month and year (e.g., ?month=9&year=2025)'},
+                status=400
+            )
 
         fs5_dir = os.path.join(settings.MEDIA_ROOT, "fs5")
         if not os.path.exists(fs5_dir):
@@ -94,32 +98,26 @@ class PayslipViewSet(viewsets.ModelViewSet):
         if not files_to_zip:
             return Response({'error': 'No FS5 files found for the given criteria.'}, status=404)
 
-        # ✅ Case 1: Only one file → serve directly
+        # ✅ Case 1: Only one file → stream safely using FileResponse
         if len(files_to_zip) == 1:
             file_path = files_to_zip[0]
             file_name = os.path.basename(file_path)
 
-            # Read bytes explicitly
-            with open(file_path, 'rb') as f:
-                file_data = f.read()
+            # Stream binary file to avoid memory and corruption issues
+            return FileResponse(open(file_path, 'rb'), as_attachment=True, filename=file_name)
 
-            response = HttpResponse(file_data, content_type='application/pdf')
-            response['Content-Disposition'] = f'attachment; filename="{file_name}"'
-            response['Content-Length'] = str(len(file_data))
-            return response
-
-        # ✅ Case 2: Multiple files → create ZIP in memory
+        # ✅ Case 2: Multiple files → create ZIP in memory and stream
         zip_buffer = BytesIO()
         with zipfile.ZipFile(zip_buffer, "w", zipfile.ZIP_DEFLATED) as zip_file:
             for file_path in files_to_zip:
                 zip_file.write(file_path, os.path.basename(file_path))
-        zip_buffer.seek(0)
-        zip_bytes = zip_buffer.getvalue()
 
+        zip_buffer.seek(0)
         zip_name = f"FS5_{month}_{year}.zip"
-        response = HttpResponse(zip_bytes, content_type="application/zip")
+
+        response = HttpResponse(zip_buffer.getvalue(), content_type="application/zip")
         response['Content-Disposition'] = f'attachment; filename="{zip_name}"'
-        response['Content-Length'] = str(len(zip_bytes))
+        response['Content-Length'] = str(len(zip_buffer.getvalue()))
         return response
 
 class PayslipComponentViewSet(viewsets.ModelViewSet):
